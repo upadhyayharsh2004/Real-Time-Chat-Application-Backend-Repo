@@ -1,0 +1,22 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.swp
+
+## EF Core Migrations (keep the folder, ignore snapshots if needed)
+# Migrations/
+
+## Secrets — never commit these
+appsettings.Production.json
+secrets.json
+.env
+
+## Docker
+.docker/
+
+## IDE
+.idea/
+*.DS_Store

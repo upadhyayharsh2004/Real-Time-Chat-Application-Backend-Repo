@@ -1,0 +1,91 @@
+version: '3.9'
+
+services:
+
+  # ── SQL Server ──────────────────────────────────────────────────
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: connecthub_auth_sqlserver
+    environment:
+      SA_PASSWORD: "ConnectHub@123"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ConnectHub@123 -Q 'SELECT 1'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - connecthub-network
+
+  # ── RabbitMQ ────────────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: connecthub_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - connecthub-network
+
+  # ── Auth API ────────────────────────────────────────────────────
+  auth-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: connecthub_auth_api
+    ports:
+      - "5000:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__AuthDb=Server=sqlserver,1433;Database=ConnectHub_Auth;User Id=sa;Password=ConnectHub@123;TrustServerCertificate=True;
+      - Jwt__Secret=ConnectHub_Super_Secret_JWT_Key_2026_Change_This_In_Production_MinLength32
+      - Jwt__Issuer=ConnectHub
+      - Jwt__Audience=ConnectHubUsers
+      - Jwt__ExpiryMinutes=60
+      - Jwt__RefreshExpiryDays=7
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Port=5672
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+      - RabbitMQ__VHost=/
+      - SEQ_URL=http://seq:5341
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - connecthub-network
+
+  # ── Seq ─────────────────────────────────────────────────────────
+  seq:
+    image: datalust/seq:latest
+    container_name: connecthub_auth_seq
+    ports:
+      - "5341:5341"
+      - "8080:80"
+    environment:
+      ACCEPT_EULA: Y
+    networks:
+      - connecthub-network
+
+volumes:
+  sqlserver_data:
+
+networks:
+  connecthub-network:
+    driver: bridge
