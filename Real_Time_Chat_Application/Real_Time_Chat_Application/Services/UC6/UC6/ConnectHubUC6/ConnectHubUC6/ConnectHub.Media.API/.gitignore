@@ -14,3 +14,5 @@ AzuriteConfig
 
 # Config
 appsettings.Development.json
+
+__blobstorage__/
