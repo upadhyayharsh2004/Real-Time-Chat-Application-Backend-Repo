@@ -1,0 +1,16 @@
+bin/
+obj/
+*.user
+appsettings.Production.json
+secrets.json
+.DS_Store
+.vs/
+# Azurite
+__azurite*
+AzuriteConfig
+
+# Media blobs / generated storage
+*.db
+
+# Config
+appsettings.Development.json

@@ -1,0 +1,70 @@
+version: '3.8'
+services:
+  connecthub-media-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: connecthub-media-api
+    ports:
+      - "5005:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__MediaDb=Server=sqlserver,1433;Database=ConnectHub_Media;User Id=sa;Password=YourPassword123!;TrustServerCertificate=True;
+      - Jwt__Secret=ConnectHub_Super_Secret_JWT_Key_2026_Change_This_In_Production_MinLength32
+      - Jwt__Issuer=ConnectHub
+      - Jwt__Audience=ConnectHubUsers
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=guest
+      - RabbitMQ__Password=guest
+      - AzureBlob__ConnectionString=DefaultEndpointsProtocol=http;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBI=;BlobEndpoint=http://azurite:10000/devstoreaccount1;
+      - AzureBlob__ContainerName=connecthub-media
+      - SEQ_URL=http://seq:5341
+    depends_on:
+      - sqlserver
+      - rabbitmq
+      - azurite
+    networks:
+      - connecthub-network
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: connecthub-sqlserver-media
+    environment:
+      SA_PASSWORD: "YourPassword123!"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1437:1433"
+    networks:
+      - connecthub-network
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: connecthub-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - connecthub-network
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite
+    container_name: connecthub-azurite
+    ports:
+      - "10000:10000"
+      - "10001:10001"
+      - "10002:10002"
+    networks:
+      - connecthub-network
+  seq:
+    image: datalust/seq:latest
+    container_name: connecthub-seq-media
+    ports:
+      - "5345:5341"
+      - "8085:80"
+    environment:
+      ACCEPT_EULA: Y
+    networks:
+      - connecthub-network
+networks:
+  connecthub-network:
+    driver: bridge
